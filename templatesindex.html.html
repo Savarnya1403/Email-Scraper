@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Scraper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #loading-bar {
+            width: 0%;
+            height: 20px;
+            background-color: green;
+            margin-top: 10px;
+        }
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Email Scraper Tool</h1>
+    <input type="text" id="urlInput" placeholder="Enter website URL" style="width: 300px; padding: 5px;">
+    <button onclick="startScraping()">Scrape Emails</button>
+    <div id="loading-bar"></div>
+    <div id="result"></div>
+
+    <script>
+        async function startScraping() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) {
+                alert("Please enter a valid URL");
+                return;
+            }
+
+            const loadingBar = document.getElementById('loading-bar');
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = ""; 
+
+            let progress = 0;
+            loadingBar.style.width = "0%";
+            const interval = setInterval(() => {
+                progress += 5;
+                if (progress > 95) progress = 95;
+                loadingBar.style.width = progress + "%";
+            }, 200);
+
+            try {
+                const response = await fetch('/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                clearInterval(interval);
+                loadingBar.style.width = "100%";
+
+                if (!response.ok) {
+                    throw new Error("Failed to fetch emails");
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                } else {
+                    const emails = data.emails;
+                    if (emails.length === 0) {
+                        resultDiv.innerHTML = "<p>No emails found.</p>";
+                    } else {
+                        resultDiv.innerHTML = `<p>Found ${emails.length} email(s):</p><ul>${emails.map(email => `<li>${email}</li>`).join("")}</ul>`;
+                    }
+                }
+            } catch (error) {
+                clearInterval(interval);
+                loadingBar.style.width = "0%";
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
